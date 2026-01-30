@@ -35,5 +35,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "proj01Mapbox"
+rootProject.name = "YatraSahayata"
 include(":app")
