@@ -1,0 +1,82 @@
+
+    // ========== TRAFFIC LAYER METHODS ==========
+
+    private void toggleTrafficLayer() {
+        trafficLayerEnabled = !trafficLayerEnabled;
+        
+        if (mapboxMap != null && mapboxMap.getStyle() != null) {
+            com.mapbox.maps.Style style = mapboxMap.getStyle();
+            
+            if (trafficLayerEnabled) {
+                addTrafficLayer(style);
+                Toast.makeText(this, "🚦 Traffic layer enabled", Toast.LENGTH_SHORT).show();
+            } else {
+                removeTrafficLayer(style);
+                Toast.makeText(this, "Traffic layer disabled", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    private void addTrafficLayer(com.mapbox.maps.Style style) {
+        try {
+            String trafficSourceId = "mapbox-traffic";
+            String trafficLayerId = "traffic-layer";
+            
+            // Add traffic source if not exists
+            if (com.mapbox.maps.extension.style.sources.SourceUtils.getSource(style, trafficSourceId) == null) {
+                com.mapbox.maps.extension.style.sources.generated.VectorSource trafficSource = 
+                    new com.mapbox.maps.extension.style.sources.generated.VectorSource.Builder(trafficSourceId)
+                        .url("mapbox://mapbox.mapbox-traffic-v1")
+                        .build();
+                com.mapbox.maps.extension.style.sources.SourceUtils.addSource(style, trafficSource);
+            }
+            
+            // Add traffic layer
+            com.mapbox.maps.extension.style.layers.generated.LineLayer trafficLayer = 
+                new com.mapbox.maps.extension.style.layers.generated.LineLayer(trafficLayerId, trafficSourceId);
+            trafficLayer.sourceLayer("traffic");
+            
+            // Style based on congestion level
+            trafficLayer.lineColor(
+                com.mapbox.maps.extension.style.expressions.dsl.generated.DslKt.match(
+                    com.mapbox.maps.extension.style.expressions.dsl.generated.DslKt.get("congestion"),
+                    com.mapbox.maps.extension.style.expressions.dsl.generated.DslKt.rgb(76, 175, 80), // Default: green
+                    com.mapbox.maps.extension.style.expressions.dsl.generated.DslKt.stop("low", 
+                        com.mapbox.maps.extension.style.expressions.dsl.generated.DslKt.rgb(76, 175, 80)),      // Green
+                    com.mapbox.maps.extension.style.expressions.dsl.generated.DslKt.stop("moderate", 
+                        com.mapbox.maps.extension.style.expressions.dsl.generated.DslKt.rgb(255, 193, 7)),     // Yellow
+                    com.mapbox.maps.extension.style.expressions.dsl.generated.DslKt.stop("heavy", 
+                        com.mapbox.maps.extension.style.expressions.dsl.generated.DslKt.rgb(255, 87, 34)),     // Red
+                    com.mapbox.maps.extension.style.expressions.dsl.generated.DslKt.stop("severe", 
+                        com.mapbox.maps.extension.style.expressions.dsl.generated.DslKt.rgb(0, 0, 0))          // Black
+                )
+            );
+            
+            trafficLayer.lineWidth(3.0);
+            trafficLayer.lineOpacity(0.8);
+            
+            com.mapbox.maps.extension.style.layers.LayerUtils.addLayer(style, trafficLayer);
+            
+            Log.d(TAG, "Traffic layer added successfully");
+        } catch (Exception e) {
+            Log.e(TAG, "Error adding traffic layer", e);
+            Toast.makeText(this, "Error enabling traffic layer", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void removeTrafficLayer(com.mapbox.maps.Style style) {
+        try {
+            String trafficLayerId = "traffic-layer";
+            
+            com.mapbox.maps.extension.style.layers.Layer layer = 
+                com.mapbox.maps.extension.style.layers.LayerUtils.getLayer(style, trafficLayerId);
+            
+            if (layer != null) {
+                com.mapbox.maps.extension.style.layers.LayerUtils.removeLayer(style, trafficLayerId);
+                Log.d(TAG, "Traffic layer removed successfully");
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error removing traffic layer", e);
+        }
+    }
+}

@@ -1,0 +1,189 @@
+
+    // ========== ROUTE SELECTION METHODS ==========
+
+    private void selectRoute(int index) {
+        if (index == selectedRouteIndex || index >= allRoutes.size()) {
+            return; // Already selected or invalid index
+        }
+        
+        selectedRouteIndex = index;
+        
+        // Update map display
+        updateMapRouteDisplay();
+        
+        // Update current route data
+        RouteData selectedRoute = allRoutes.get(index);
+        currentRoutePoints = selectedRoute.points;
+        currentRouteDistanceKm = selectedRoute.distanceKm;
+        currentRouteDurationMinutes = (int) Math.round(selectedRoute.durationMinutes);
+        
+        if (!selectedRoute.points.isEmpty()) {
+            routeStart = selectedRoute.points.get(0);
+            routeEnd = selectedRoute.points.get(selectedRoute.points.size() - 1);
+        }
+        
+        // Haptic feedback
+        if (binding != null && binding.bottomSheet != null)
+             binding.bottomSheet.performHapticFeedback(android.view.HapticFeedbackConstants.CONTEXT_CLICK);
+        
+        // Toast notification
+        Toast.makeText(this, "Route " + (index + 1) + " selected", Toast.LENGTH_SHORT).show();
+    }
+
+    private void updateMapRouteDisplay() {
+        if (mapboxMap == null || mapboxMap.getStyle() == null) return;
+        
+        com.mapbox.maps.Style style = mapboxMap.getStyle();
+        
+        // Update each route's styling
+        for (int i = 0; i < allRoutes.size(); i++) {
+            RouteData route = allRoutes.get(i);
+            
+            try {
+                // Get the layer
+                com.mapbox.maps.extension.style.layers.Layer layer = 
+                    com.mapbox.maps.extension.style.layers.LayerUtils.getLayer(style, route.layerId);
+                
+                if (layer instanceof com.mapbox.maps.extension.style.layers.generated.LineLayer) {
+                    com.mapbox.maps.extension.style.layers.generated.LineLayer lineLayer = 
+                        (com.mapbox.maps.extension.style.layers.generated.LineLayer) layer;
+                    
+                    if (i == selectedRouteIndex) {
+                        // Selected route: Blue, thick
+                        lineLayer.lineColor("#4285F4");
+                        lineLayer.lineWidth(10.0);
+                        lineLayer.lineOpacity(1.0);
+                    } else {
+                        // Non-selected route: Light gray, thin
+                        lineLayer.lineColor("#BDBDBD");
+                        lineLayer.lineWidth(5.0);
+                        lineLayer.lineOpacity(0.6);
+                    }
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Error updating route layer: " + route.layerId, e);
+            }
+        }
+    }
+
+    // ========== TRANSPORT MODE METHODS ==========
+
+    private void setTransportMode(String mode) {
+        transportMode = mode;
+        updateTransportModeUI();
+        
+        // Recalculate route if one exists
+        if (routeStart != null && routeEnd != null) {
+            Toast.makeText(this, "Recalculating route for " + getModeDisplayName(mode), Toast.LENGTH_SHORT).show();
+            getRoute(routeStart, routeEnd);
+        }
+    }
+
+    private void updateTransportModeUI() {
+        if (binding == null) return;
+        // Reset all buttons to default state
+        binding.modeCarButton.setBackgroundTintList(null);
+        binding.modeCarButton.setTextColor(getResources().getColor(R.color.gmaps_text_primary));
+        
+        binding.modeBikeButton.setBackgroundTintList(null);
+        binding.modeBikeButton.setTextColor(getResources().getColor(R.color.gmaps_text_primary));
+        
+        binding.modeWalkButton.setBackgroundTintList(null);
+        binding.modeWalkButton.setTextColor(getResources().getColor(R.color.gmaps_text_primary));
+        
+        binding.modeBusButton.setBackgroundTintList(null);
+        binding.modeBusButton.setTextColor(getResources().getColor(R.color.gmaps_text_primary));
+        
+        // Highlight selected button
+        switch (transportMode) {
+            case "driving":
+                binding.modeCarButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
+                        getResources().getColor(R.color.gmaps_blue)));
+                binding.modeCarButton.setTextColor(getResources().getColor(R.color.white));
+                break;
+            case "cycling":
+                binding.modeBikeButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
+                        getResources().getColor(R.color.gmaps_blue)));
+                binding.modeBikeButton.setTextColor(getResources().getColor(R.color.white));
+                break;
+            case "walking":
+                binding.modeWalkButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
+                        getResources().getColor(R.color.gmaps_blue)));
+                binding.modeWalkButton.setTextColor(getResources().getColor(R.color.white));
+                break;
+            case "driving-traffic":
+                binding.modeBusButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
+                        getResources().getColor(R.color.gmaps_blue)));
+                binding.modeBusButton.setTextColor(getResources().getColor(R.color.white));
+                break;
+        }
+    }
+
+    private String getModeDisplayName(String mode) {
+        switch (mode) {
+            case "driving": return "Car";
+            case "cycling": return "Bike";
+            case "walking": return "Walk";
+            case "driving-traffic": return "Bus";
+            default: return "Car";
+        }
+    }
+
+    // ========== TRAFFIC LAYER METHODS ==========
+
+    private void toggleTrafficLayer() {
+        trafficLayerEnabled = !trafficLayerEnabled;
+
+        if (mapboxMap != null && mapboxMap.getStyle() != null) {
+            com.mapbox.maps.Style style = mapboxMap.getStyle();
+
+            if (trafficLayerEnabled) {
+                addTrafficLayer(style);
+                Toast.makeText(this, "🚦 Traffic layer enabled", Toast.LENGTH_SHORT).show();
+            } else {
+                removeTrafficLayer(style);
+                Toast.makeText(this, "Traffic layer disabled", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    private void addTrafficLayer(com.mapbox.maps.Style style) {
+        try {
+            String trafficSourceId = "mapbox-traffic";
+            String trafficLayerId = "traffic-layer";
+
+            // 1. Cleanup first (ensure no duplicates)
+            removeTrafficLayer(style);
+
+            // 2. Add traffic source
+            if (!style.styleSourceExists(trafficSourceId)) {
+                com.mapbox.maps.extension.style.sources.generated.VectorSource trafficSource = new com.mapbox.maps.extension.style.sources.generated.VectorSource.Builder(
+                        trafficSourceId)
+                        .url("mapbox://mapbox.mapbox-traffic-v1")
+                        .build();
+                com.mapbox.maps.extension.style.sources.SourceUtils.addSource(style, trafficSource);
+            }
+
+            // 3. Add traffic layer with HIGH VISIBILITY (Debug)
+            com.mapbox.maps.extension.style.layers.generated.LineLayer trafficLayer = new com.mapbox.maps.extension.style.layers.generated.LineLayer(
+                    trafficLayerId, trafficSourceId);
+
+            trafficLayer.sourceLayer("traffic");
+
+            // Temporary: Bright Magenta to verify data is loading
+            trafficLayer.lineColor("#FF00FF");
+            trafficLayer.lineWidth(5.0);
+            trafficLayer.lineOpacity(0.9);
+
+            // Add layer to top
+            com.mapbox.maps.extension.style.layers.LayerUtils.addLayer(style, trafficLayer);
+
+            Log.d(TAG, "Traffic layer added (Debug Mode)");
+            Toast.makeText(this, "Layer added (Magenta for visibility)", Toast.LENGTH_SHORT).show();
+
+        } catch (Exception e) {
+            Log.e(TAG, "Error adding traffic layer", e);
+            Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
+    }
+}

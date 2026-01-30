@@ -1,0 +1,63 @@
+
+    // ========== TRANSPORT MODE METHODS ==========
+
+    private void setTransportMode(String mode) {
+        transportMode = mode;
+        updateTransportModeUI();
+        
+        // Recalculate route if one exists
+        if (routeStart != null && routeEnd != null) {
+            Toast.makeText(this, "Recalculating route for " + getModeDisplayName(mode), Toast.LENGTH_SHORT).show();
+            getRoute(routeStart, routeEnd);
+        }
+    }
+
+    private void updateTransportModeUI() {
+        // Reset all buttons to default state
+        binding.modeCarButton.setBackgroundTintList(null);
+        binding.modeCarButton.setTextColor(getResources().getColor(R.color.gmaps_text_primary));
+        
+        binding.modeBikeButton.setBackgroundTintList(null);
+        binding.modeBikeButton.setTextColor(getResources().getColor(R.color.gmaps_text_primary));
+        
+        binding.modeWalkButton.setBackgroundTintList(null);
+        binding.modeWalkButton.setTextColor(getResources().getColor(R.color.gmaps_text_primary));
+        
+        binding.modeBusButton.setBackgroundTintList(null);
+        binding.modeBusButton.setTextColor(getResources().getColor(R.color.gmaps_text_primary));
+        
+        // Highlight selected button
+        switch (transportMode) {
+            case "driving":
+                binding.modeCarButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
+                        getResources().getColor(R.color.gmaps_blue)));
+                binding.modeCarButton.setTextColor(getResources().getColor(R.color.white));
+                break;
+            case "cycling":
+                binding.modeBikeButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
+                        getResources().getColor(R.color.gmaps_blue)));
+                binding.modeBikeButton.setTextColor(getResources().getColor(R.color.white));
+                break;
+            case "walking":
+                binding.modeWalkButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
+                        getResources().getColor(R.color.gmaps_blue)));
+                binding.modeWalkButton.setTextColor(getResources().getColor(R.color.white));
+                break;
+            case "driving-traffic":
+                binding.modeBusButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
+                        getResources().getColor(R.color.gmaps_blue)));
+                binding.modeBusButton.setTextColor(getResources().getColor(R.color.white));
+                break;
+        }
+    }
+
+    private String getModeDisplayName(String mode) {
+        switch (mode) {
+            case "driving": return "Car";
+            case "cycling": return "Bike";
+            case "walking": return "Walk";
+            case "driving-traffic": return "Bus";
+            default: return "Car";
+        }
+    }
+}

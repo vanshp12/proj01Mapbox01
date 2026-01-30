@@ -1,0 +1,30 @@
+
+    private void startNavigation() {
+        if (isNavigating) return;
+        
+        isNavigating = true;
+        updateUIState(UIState.NAVIGATION_ACTIVE);
+        
+        // Adjust Camera for Driving
+        if (currentLocation != null) {
+            CameraOptions camera = new CameraOptions.Builder()
+                    .center(currentLocation)
+                    .zoom(18.0)
+                    .pitch(60.0)
+                    .bearing(0.0) 
+                    .build();
+            com.mapbox.maps.plugin.animation.CameraAnimationsUtils.getCamera(mapView).flyTo(camera,
+                    new com.mapbox.maps.plugin.animation.MapAnimationOptions.Builder().duration(1000).build(),
+                    null);
+        }
+
+        // Voice Announcement
+        if (voiceGuidanceService != null) {
+            String dest = binding.destinationInput.getText().toString();
+            if (dest.isEmpty()) dest = "destination";
+            voiceGuidanceService.speak("Starting navigation to " + dest);
+        }
+        
+        // Start Simulation if enabled (logic needs to be verified)
+        // startSimulation(); 
+    }

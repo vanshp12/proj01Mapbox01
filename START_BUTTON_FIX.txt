@@ -1,0 +1,52 @@
+// CRASH FIX FOR START BUTTON
+// Replace lines 382-392 in MainActivity.java with this code:
+
+        // Start button in bottom sheet - launches active navigation
+        binding.startButton.setOnClickListener(v -> {
+            try {
+                Log.d(TAG, "Start button clicked");
+                Log.d(TAG, "currentRouteJson: " + (currentRouteJson != null ? "present (" + currentRouteJson.length() + " chars)" : "null"));
+                
+                if (currentRouteJson == null || currentRouteJson.isEmpty()) {
+                    Log.w(TAG, "No route data available for navigation");
+                    Toast.makeText(this, "⚠️ Please search for a route first", Toast.LENGTH_LONG).show();
+                    return;
+                }
+                
+                // Validate route JSON
+                try {
+                    JsonObject testParse = JsonParser.parseString(currentRouteJson).getAsJsonObject();
+                    if (!testParse.has("routes")) {
+                        Log.e(TAG, "Invalid route JSON: missing 'routes' key");
+                        Toast.makeText(this, "❌ Invalid route data. Please search again.", Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                } catch (Exception e) {
+                    Log.e(TAG, "Route JSON validation failed", e);
+                    Toast.makeText(this, "❌ Invalid route data. Please search again.", Toast.LENGTH_LONG).show();
+                    return;
+                }
+                
+                // Launch full-screen active navigation
+                Log.d(TAG, "Launching ActiveNavigationActivity");
+                Toast.makeText(this, "🧭 Starting navigation...", Toast.LENGTH_SHORT).show();
+                
+                android.content.Intent intent = new android.content.Intent(this, ActiveNavigationActivity.class);
+                intent.putExtra("route_json", currentRouteJson);
+                
+                // Verify intent has data
+                if (intent.getStringExtra("route_json") == null) {
+                    Log.e(TAG, "Failed to add route_json to intent");
+                    Toast.makeText(this, "❌ Error preparing navigation", Toast.LENGTH_LONG).show();
+                    return;
+                }
+                
+                startActivity(intent);
+                Log.d(TAG, "ActiveNavigationActivity started successfully");
+                
+            } catch (Exception e) {
+                Log.e(TAG, "Error in Start button click handler", e);
+                e.printStackTrace();
+                Toast.makeText(this, "❌ Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            }
+        });

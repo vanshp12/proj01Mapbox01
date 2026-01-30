@@ -1,0 +1,81 @@
+
+    // ========== UI STATE MANAGEMENT ==========
+    private enum UIState {
+        DEFAULT_MAP,       // Search Pill, Bottom Nav, FABs
+        SEARCH_EXPANDED,   // Search Card visible, others hidden
+        ROUTE_PREVIEW,     // Bottom Sheet showing route, Map showing route
+        NAVIGATION_ACTIVE  // Turn-by-turn UI
+    }
+
+    private void updateUIState(UIState state) {
+        // 1. Hide Everything First (Reset State)
+        binding.searchCapsule.setVisibility(View.GONE);
+        binding.categoryChipsScroll.setVisibility(View.GONE);
+        binding.bottomNavigation.setVisibility(View.GONE);
+        
+        binding.searchCard.setVisibility(View.GONE);
+        
+        binding.bottomSheet.setVisibility(View.GONE);
+        binding.directionsFab.setVisibility(View.GONE);
+        
+        binding.navigationTopCard.setVisibility(View.GONE);
+        binding.navigationBottomCard.setVisibility(View.GONE);
+        binding.navTurnIcon.setVisibility(View.GONE);
+        
+        // FABs - Hide all by default
+        binding.myLocationFab.setVisibility(View.GONE);
+        binding.fabTraffic.setVisibility(View.GONE);
+        
+        // Tab Content
+        binding.tabContentContainer.setVisibility(View.GONE);
+
+        // 2. Show Elements Based on State
+        switch (state) {
+            case DEFAULT_MAP:
+                binding.searchCapsule.setVisibility(View.VISIBLE);
+                binding.categoryChipsScroll.setVisibility(View.VISIBLE);
+                binding.bottomNavigation.setVisibility(View.VISIBLE);
+                
+                // Show FABs
+                binding.myLocationFab.setVisibility(View.VISIBLE);
+                binding.fabTraffic.setVisibility(View.VISIBLE);
+                binding.directionsFab.setVisibility(View.VISIBLE);
+                
+                // Show Bottom Sheet in Peek Mode
+                binding.bottomSheet.setVisibility(View.VISIBLE);
+                com.google.android.material.bottomsheet.BottomSheetBehavior.from(binding.bottomSheet)
+                    .setState(com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_COLLAPSED);
+                break;
+
+            case SEARCH_EXPANDED:
+                binding.searchCard.setVisibility(View.VISIBLE);
+                // FABs hidden to avoid clutter/overlap with keyboard or search results
+                break;
+
+            case ROUTE_PREVIEW:
+                // Keep Search Pill visible for context? Or maybe hide it to focus on bottom sheet?
+                // Let's hide it to avoid overlap with Route Line if it goes top.
+                // Actually, keep it logic simple:
+                
+                binding.bottomSheet.setVisibility(View.VISIBLE);
+                // Expand slightly or let user control? 
+                // Usually Route Preview has the bottom sheet somewhat expanded.
+                
+                // Show Directions FAB? No, we are in route preview.
+                // Show Map FABs?
+                binding.myLocationFab.setVisibility(View.VISIBLE);
+                binding.fabTraffic.setVisibility(View.VISIBLE);
+                break;
+
+            case NAVIGATION_ACTIVE:
+                binding.navigationTopCard.setVisibility(View.VISIBLE);
+                binding.navigationBottomCard.setVisibility(View.VISIBLE);
+                binding.navTurnIcon.setVisibility(View.VISIBLE);
+                
+                // Maybe show a "Recenter" button if user pans away?
+                // For now, keep generic FABs hidden to avoid overlap with Nav Cards.
+                // Re-centering is usually strictly handled in Nav mode.
+                binding.fabTraffic.setVisibility(View.VISIBLE); // Keep traffic toggle available!
+                break;
+        }
+    }

@@ -1,0 +1,94 @@
+    private void setupSuggestions() {
+        // Initialize Adapter
+        suggestionsAdapter = new SuggestionsAdapter(suggestion -> {
+            // On Suggestion Click
+            isSelectingSuggestion = true;
+            
+            if (isSourceInput) {
+                if (binding.sourceInput != null) {
+                    binding.sourceInput.setText(suggestion.name);
+                    currentLocation = suggestion.location; // Use selected place as source
+                    // TODO: Clear flag to use GPS if user wants "My Location" back
+                }
+            } else {
+                if (binding.destinationInput != null) {
+                    binding.destinationInput.setText(suggestion.name);
+                    navigationDestination = suggestion.location;
+                    if (binding.destinationInfoName != null) binding.destinationInfoName.setText(suggestion.name);
+                    if (binding.destinationInfoAddress != null) binding.destinationInfoAddress.setText(suggestion.address);
+                }
+            }
+            
+            // Hide suggestions
+            if (binding.suggestionsRecyclerView != null)
+                binding.suggestionsRecyclerView.setVisibility(android.view.View.GONE);
+                
+            isSelectingSuggestion = false;
+
+            // If we have both points, calculate route
+            String source = binding.sourceInput.getText().toString();
+            String dest = binding.destinationInput.getText().toString();
+            if (!source.isEmpty() && !dest.isEmpty() && navigationDestination != null) {
+                calculateRoute(source, dest);
+            }
+        });
+
+        if (binding.suggestionsRecyclerView != null) {
+            binding.suggestionsRecyclerView.setLayoutManager(new androidx.recyclerview.widget.LinearLayoutManager(this));
+            binding.suggestionsRecyclerView.setAdapter(suggestionsAdapter);
+        }
+
+        // Text Watcher Logic
+        android.text.TextWatcher textWatcher = new android.text.TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                if (isSelectingSuggestion) return;
+                
+                if (s.length() > 2) {
+                    if (searchRunnable != null) searchHandler.removeCallbacks(searchRunnable);
+                    searchRunnable = () -> {
+                        geocodingService.searchPlaces(s.toString(), new GeocodingService.SearchCallback() {
+                            @Override
+                            public void onResults(List<GeocodingService.PlaceSuggestion> results) {
+                                runOnUiThread(() -> {
+                                    if (binding.suggestionsRecyclerView != null) {
+                                        suggestionsAdapter.setSuggestions(results);
+                                        binding.suggestionsRecyclerView.setVisibility(android.view.View.VISIBLE);
+                                    }
+                                });
+                            }
+
+                            @Override
+                            public void onError(Exception e) {
+                                Log.e(TAG, "Search Error", e);
+                            }
+                        });
+                    };
+                    searchHandler.postDelayed(searchRunnable, 500); // 500ms debounce
+                } else {
+                    if (binding.suggestionsRecyclerView != null)
+                        binding.suggestionsRecyclerView.setVisibility(android.view.View.GONE);
+                }
+            }
+
+            @Override
+            public void afterTextChanged(android.text.Editable s) {}
+        };
+
+        if (binding.sourceInput != null) {
+            binding.sourceInput.addTextChangedListener(textWatcher);
+            binding.sourceInput.setOnFocusChangeListener((v, hasFocus) -> {
+                if (hasFocus) isSourceInput = true;
+            });
+        }
+        
+        if (binding.destinationInput != null) {
+            binding.destinationInput.addTextChangedListener(textWatcher);
+            binding.destinationInput.setOnFocusChangeListener((v, hasFocus) -> {
+                if (hasFocus) isSourceInput = false;
+            });
+        }
+    }

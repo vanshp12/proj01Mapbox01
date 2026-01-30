@@ -1,0 +1,17 @@
+
+    private void removeTrafficLayer(com.mapbox.maps.Style style) {
+        try {
+            String trafficLayerId = "traffic-layer";
+
+            com.mapbox.maps.extension.style.layers.Layer layer = com.mapbox.maps.extension.style.layers.LayerUtils
+                    .getLayer(style, trafficLayerId);
+
+            if (layer != null) {
+                style.removeStyleLayer(trafficLayerId);
+                android.util.Log.d("MainActivity", "Traffic layer removed successfully");
+            }
+        } catch (Exception e) {
+            android.util.Log.e("MainActivity", "Error removing traffic layer", e);
+        }
+    }
+}
