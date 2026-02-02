@@ -32,6 +32,11 @@ dependencyResolutionManagement {
                 create<BasicAuthentication>("basic")
             }
         }
+        
+        // JitPack repository for MPAndroidChart
+        maven {
+            url = uri("https://jitpack.io")
+        }
     }
 }
 
